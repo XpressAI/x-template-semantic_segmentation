@@ -1,1 +1,6 @@
 xircuits
+torch
+torchvision
+torchaudio
+matplotlib
+onnx_tf
