@@ -1,7 +1,7 @@
 from xai_components.base import InArg, OutArg, Component, xai_component
 from typing import Tuple, Dict
-from xai_components.xai_pytorch.unet_train import CvSaveImage, UNet, UNetDataset, EarlyStopping, TimeLapse
-from xai_components.xai_pytorch.unet_train import ImageCountNotEqual, ModelNotFound
+from .unet_train import CvSaveImage, UNet, UNetDataset, EarlyStopping, TimeLapse
+from .unet_train import ImageCountNotEqual, ModelNotFound
 from pathlib import Path
 from tqdm import tqdm
 import cv2
@@ -16,46 +16,31 @@ import torch.optim as optim
 
 
 @xai_component
-class ConvertTorchModelToOnnx(Component):
-    model: InArg[any] #UNet
-    device_name: InArg[any] #UNet
+class ReadMaskDataSet(Component):
+    dataset_name: InArg[str]
+    mask_dataset_name: InArg[str]
     
-    input_model_path: InArg[str]
-    output_model_path: InArg[str]
-    image_size: InArg[tuple]
+    dataset: OutArg[Tuple[str, str]]
 
     def __init__(self):
         self.done = False
-        self.model = InArg.empty()
-        self.device_name = InArg.empty()
-        self.input_model_path = InArg.empty()
-        self.output_model_path = InArg.empty()
-        self.image_size = InArg.empty()
-        
-    def execute(self, ctx) -> None:
-        model = self.model.value
-        model_path_w_extn = self.input_model_path.value
-    
-        checkpoint = torch.load(model_path_w_extn, map_location=torch.device(self.device_name.value))
-        
-        model.load_state_dict(checkpoint['model_state_dict'])
+        self.dataset_name = InArg.empty()
+        self.mask_dataset_name = InArg.empty()
+        self.dataset = OutArg.empty()
 
-        # gray channel
-        dummy_input = torch.randn(1, 1, self.image_size.value[0], self.image_size.value[1], device=self.device_name.value)
-        
-        # rgb channel
-        # dummy_input = torch.randn(1, 3, self.image_size.value[0], self.image_size.value[1], device=self.device_name.value)
-        
-        torch.onnx.export(model,
-                          dummy_input,
-                          self.output_model_path.value,
-                          export_params = True,
-                          opset_version=11)
-        
-        print(f"Converted model from {self.input_model_path.value} to {self.output_model_path.value}")
-        
+    def execute(self, ctx) -> None:
+
+        if self.dataset_name.value and self.mask_dataset_name.value:
+            
+            # Preprocessing can be done here if needed
+            self.dataset.value = (self.dataset_name.value, self.mask_dataset_name.value)
+            print(self.dataset.value)
+
+        else:
+            print("Dataset was not found!")
+
         self.done = True
-    
+
 
 @xai_component(type="model")
 class CreateUnetModel(Component):
@@ -534,3 +519,45 @@ class UnetPredict(Component):
             print(e)
             
         self.done = True
+
+@xai_component
+class ConvertTorchModelToOnnx(Component):
+    model: InArg[any] #UNet
+    device_name: InArg[any] #UNet
+    
+    input_model_path: InArg[str]
+    output_model_path: InArg[str]
+    image_size: InArg[tuple]
+
+    def __init__(self):
+        self.done = False
+        self.model = InArg.empty()
+        self.device_name = InArg.empty()
+        self.input_model_path = InArg.empty()
+        self.output_model_path = InArg.empty()
+        self.image_size = InArg.empty()
+        
+    def execute(self, ctx) -> None:
+        model = self.model.value
+        model_path_w_extn = self.input_model_path.value
+    
+        checkpoint = torch.load(model_path_w_extn, map_location=torch.device(self.device_name.value))
+        
+        model.load_state_dict(checkpoint['model_state_dict'])
+
+        # gray channel
+        dummy_input = torch.randn(1, 1, self.image_size.value[0], self.image_size.value[1], device=self.device_name.value)
+        
+        # rgb channel
+        # dummy_input = torch.randn(1, 3, self.image_size.value[0], self.image_size.value[1], device=self.device_name.value)
+        
+        torch.onnx.export(model,
+                          dummy_input,
+                          self.output_model_path.value,
+                          export_params = True,
+                          opset_version=11)
+        
+        print(f"Converted model from {self.input_model_path.value} to {self.output_model_path.value}")
+        
+        self.done = True
+    
