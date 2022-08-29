@@ -55,3 +55,7 @@ class PrepareButterflyDataset(Component):
                     shutil.move(path + file, new_path + file.replace("_seg0",""))
 
         print("Leeds butterfly dataset ready!")
+        
+        if not os.path.exists("leedsbutterfly/images-transformed/train_image"):        
+            os.mkdir("leedsbutterfly/images-transformed")
+            os.mkdir("leedsbutterfly/segmentations-transformed")

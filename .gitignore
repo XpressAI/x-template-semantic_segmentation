@@ -130,3 +130,6 @@ dmypy.json
 
 # dataset example
 leedsbutterfly/
+
+#torch weights
+*.pth

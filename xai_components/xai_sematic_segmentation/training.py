@@ -134,16 +134,26 @@ class ImageTrainTestSplit(Component):
             train_set_count = int(total_images * float(splitRatio))
             test_set_count = total_images - train_set_count
 
-            new_train_set_raw_str = (Path(self.input_str.value[0] + "-transformed") / train_set_raw_str)
-            new_train_set_mask_str = (Path(self.input_str.value[1] + "-transformed") / train_set_mask_str)
+#             new_train_set_raw_str = (Path(self.input_str.value[0] + "-transformed") / train_set_raw_str)
+#             new_train_set_mask_str = (Path(self.input_str.value[1] + "-transformed") / train_set_mask_str)
 
-            new_test_set_raw_str = (Path(self.input_str.value[0] + "-transformed") / test_set_raw_str)
-            new_test_set_mask_str = (Path(self.input_str.value[1] + "-transformed") / test_set_mask_str) 
+#             new_test_set_raw_str = (Path(self.input_str.value[0] + "-transformed") / test_set_raw_str)
+#             new_test_set_mask_str = (Path(self.input_str.value[1] + "-transformed") / test_set_mask_str) 
 
+            new_train_set_raw_str = os.path.join((self.input_str.value[0] + "-transformed"), train_set_raw_str)
+            new_train_set_mask_str = os.path.join((self.input_str.value[1] + "-transformed"), train_set_mask_str)
+
+            new_test_set_raw_str = os.path.join((self.input_str.value[0] + "-transformed"), test_set_raw_str)
+            new_test_set_mask_str = os.path.join((self.input_str.value[1] + "-transformed"), test_set_mask_str) 
+            
             dataset = [new_train_set_raw_str, new_train_set_mask_str, new_test_set_raw_str, new_test_set_mask_str]
-
             for dataset_path in dataset:
-                file = "\\".join(str(dataset_path).split("\\")[0:len(str(dataset_path).split("\\")) - 1])
+                if not os.path.exists(dataset_path):
+                    print(f"Created {dataset_path}")
+                    os.mkdir(dataset_path)
+                    
+                file = "/".join(str(dataset_path).split("/")[0:len(str(dataset_path).split("/")) - 1])
+                
                 if not os.path.exists(file):
                     print(f"Created {file}")
                     os.mkdir(file)
@@ -155,10 +165,10 @@ class ImageTrainTestSplit(Component):
 
             TRANSFORM_IMG = T.Compose([T.Resize(self.image_size.value)])
 
-            dataset_raw = torchvision.datasets.ImageFolder(Path(self.input_str.value[0]), transform = TRANSFORM_IMG)
+            dataset_raw = torchvision.datasets.ImageFolder((self.input_str.value[0]), transform = TRANSFORM_IMG)
             train_set_raw, val_set_raw = torch.utils.data.random_split(dataset_raw, [train_set_count, test_set_count],generator=torch.Generator().manual_seed(randomSeed))
 
-            dataset_mask = torchvision.datasets.ImageFolder(Path(self.input_str.value[1]), transform = TRANSFORM_IMG)
+            dataset_mask = torchvision.datasets.ImageFolder((self.input_str.value[1]), transform = TRANSFORM_IMG)
             train_set_mask, val_set_mask = torch.utils.data.random_split(dataset_mask, [train_set_count, test_set_count],generator=torch.Generator().manual_seed(randomSeed))
 
             CvSaveImage(train_set_raw, new_train_set_raw_str).__saveImage__()
@@ -213,6 +223,9 @@ class PrepareUnetDataLoader(Component):
         shuffle_bool = self.shuffle.value if self.shuffle.value else True
         workers_integer = self.workers.value if self.workers.value else 0
         pin_memory_bool = self.pin_memory.value if self.pin_memory.value else False
+        
+        print(self.train_image_folder.value[0])
+        print(self.train_image_folder.value[1])
         
         train_set = UNetDataset(image_dir=str(self.train_image_folder.value[0]), masks_dir=str(self.train_image_folder.value[1]))
         train_loader = torch.utils.data.DataLoader(train_set,
@@ -405,25 +418,39 @@ class TrainUnet(Component):
             import matplotlib.pyplot as plt
 
             plt.figure()
+            
             plt.plot(np.array(loss_values), 'b')
             plt.savefig(f"{wgraph_model_path}_loss_values.png")
             plt.close()
 
-            plt.figure()
-            plt.plot(np.array(dice_accuracy_values), 'b')
-            plt.savefig(f'{wgraph_model_path}_dice_accuracy_values.png')
-            plt.close()
+            try:
+                plt.figure()
+                dice_accuracy_values = torch.tensor(dice_accuracy_values, device = 'cpu')
+                plt.plot(np.array(dice_accuracy_values), 'b')
+                plt.savefig(f'{wgraph_model_path}_dice_accuracy_values.png')
+                plt.close()
+            except Exception as e:
+                print(e)
+                
+            try:
 
-            plt.figure()
-            plt.plot(np.array(dice_score_values), 'b')
-            plt.savefig(f'{wgraph_model_path}_dice_score_values.png')
-            plt.close()
-
-            plt.figure()
-            plt.plot(np.array(iou_score_values), 'b')
-            plt.savefig(f'{wgraph_model_path}_IoU_score_values.png')
-            plt.close()
-
+                plt.figure()
+                dice_score_values = torch.tensor(dice_score_values, device = 'cpu')
+                plt.plot(np.array(dice_score_values), 'b')
+                plt.savefig(f'{wgraph_model_path}_dice_score_values.png')
+                plt.close()
+            except Exception as e:
+                print(e)
+                
+            try:
+                plt.figure()
+                iou_score_values = torch.tensor(iou_score_values, device = 'cpu')
+                plt.plot(np.array(iou_score_values), 'b')
+                plt.savefig(f'{wgraph_model_path}_IoU_score_values.png')
+                plt.close()
+            except Exception as e:
+                print(e)
+                
         self.done = True
 
 
@@ -473,8 +500,10 @@ class UnetPredict(Component):
         self.image_size = InArg.empty()
         
     def execute(self, ctx) -> None:
-        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        
+        device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+        #device = torch.device('cpu')
+
+        print(device)
         model = UNet()
         model.to(device)
         
@@ -494,7 +523,11 @@ class UnetPredict(Component):
                 model_checkpoint = torch.load(self.model_path.value, map_location=device)
                 model.load_state_dict(model_checkpoint['model_state_dict'])
                 model.eval()
-                model_predict_tensor = model.forward(image)
+                print(type(image))
+                image = image.to(device)
+                print(type(image))                
+                model_predict_tensor = model.forward(image.cpu())
+                
                 model_predict_numpy = model_predict_tensor.detach().numpy()
                 image_output = np.transpose(model_predict_numpy[0], (1,2,0))
 
@@ -510,10 +543,10 @@ class UnetPredict(Component):
 
             else:
                 raise ModelNotFound()
-        
-            cv2.imshow("Model Output", image_output)
-            cv2.waitKey(0) 
-            cv2.destroyAllWindows()
+            cv2.imwrite("Model Output.jpg", image_output)
+            # cv2.imshow("Model Output", image_output)
+            # cv2.waitKey(0) 
+            # cv2.destroyAllWindows()
         
         except Exception as e:
             print(e)

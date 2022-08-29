@@ -45,7 +45,7 @@ class CvSaveImage():
         for raw_image in tqdm(self.image):
             img = np.asarray(raw_image[0])
             img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-            image_str = str(self.image_path) + "\\" + str(count).zfill(5) + ".png"
+            image_str = os.path.join(self.image_path, str(count).zfill(5) + ".png")
             cv2.imwrite(image_str, img)
             count += 1
 
