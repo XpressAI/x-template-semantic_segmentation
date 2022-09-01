@@ -1,12 +1,12 @@
 from xai_components.base import InArg, OutArg, Component, xai_component
 import os
+from tqdm import tqdm
 
 @xai_component
 class PrepareButterflyDataset(Component):
 
     def __init__(self):
         self.done = False
-
         
     def execute(self, ctx) -> None:
 
@@ -18,9 +18,17 @@ class PrepareButterflyDataset(Component):
 
             import requests
             url = 'http://www.josiahwang.com/dataset/leedsbutterfly/leedsbutterfly_dataset_v1.0.zip'
-            r = requests.get(url, allow_redirects=True)
+            #the server requires a user header to fetch
+            headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36'}
 
-            open(fn, 'wb').write(r.content)
+            with requests.get(url, headers=headers, stream=True) as r:
+                r.raise_for_status()
+                with open(fn, 'wb') as f:
+                    pbar = tqdm(total=int(r.headers['Content-Length']))
+                    for chunk in r.iter_content(chunk_size=8192):
+                        if chunk:  # filter out keep-alive new chunks
+                            f.write(chunk)
+                            pbar.update(len(chunk))
 
             print("Leeds dataset successfully downloaded.")
 
