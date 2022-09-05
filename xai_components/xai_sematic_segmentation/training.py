@@ -501,9 +501,7 @@ class UnetPredict(Component):
         
     def execute(self, ctx) -> None:
         device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-        #device = torch.device('cpu')
 
-        print(device)
         model = UNet()
         model.to(device)
         
@@ -523,11 +521,8 @@ class UnetPredict(Component):
                 model_checkpoint = torch.load(self.model_path.value, map_location=device)
                 model.load_state_dict(model_checkpoint['model_state_dict'])
                 model.eval()
-                print(type(image))
-                image = image.to(device)
-                print(type(image))                
+                image = image.to(device)            
                 model_predict_tensor = model.forward(image.cpu())
-                
                 model_predict_numpy = model_predict_tensor.detach().numpy()
                 image_output = np.transpose(model_predict_numpy[0], (1,2,0))
 
@@ -543,7 +538,10 @@ class UnetPredict(Component):
 
             else:
                 raise ModelNotFound()
-            cv2.imwrite("Model Output.jpg", image_output)
+
+            img = cv2.convertScaleAbs(image_output, alpha=(255.0)) # scale image from float32 to unint8
+            cv2.imwrite("model_output.png", img)
+            
             # cv2.imshow("Model Output", image_output)
             # cv2.waitKey(0) 
             # cv2.destroyAllWindows()
