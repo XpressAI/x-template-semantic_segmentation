@@ -1,22 +1,11 @@
-# Xircuits Project Template
+# Xircuits Semantic Segmentation Project Template
 
 This repo comprises of the training, inference and model conversion (pytorch model to onnx model) code for UNet masking model using Xircuits.
 
 ## Prerequisites
 
-A project may have prerequisites such as models that needs to be downloaded or non-python related setup. You may list them down here.
+This repository uses the [leeds butterfly](http://www.josiahwang.com/dataset/leedsbutterfly) dataset as its example. You may download it [here](ttp://www.josiahwang.com/dataset/leedsbutterfly/leedsbutterfly_dataset_v1.0.zip) and place it in your working directory, or let the `PrepareButterflyDataset` component do it for you. 
 
-http://www.josiahwang.com/dataset/leedsbutterfly/leedsbutterfly_dataset_v1.0.zip
-
-```
-import os
-for folder in os.listdir("segmentations"):
-    path = os.path.join("segmentations", folder)
-    for mask_image in os.listdir(path):
-        old_path = os.path.join(path, mask_image)
-        new_path = os.path.join(path, mask_image.replace("_seg0",""))
-        os.rename(old_path, new_path)
-```
 
 ## Installation
 
@@ -26,11 +15,9 @@ pip install -r requirements.txt
 
 **Description**
 
-- This repo comprises of the training, inference and model conversion (pytorch model to onnx model) code for UNet masking model.
+- This repo comprises of the training, inference and model conversion (pytorch model to onnx model) code for UNet masking model. It contains 9 components:
 
 
-
-- Added the component required for the training and inferencing.
 1. ConvertTorchModelToOnnx
 2. CreateUnetModel
 3. ImageTrainTestSplit
@@ -39,10 +26,11 @@ pip install -r requirements.txt
 6. UNetModel
 7. UnetPredict
 8. ReadMaskDataset
+9. PrepareButterflyDataset
 
 With 3 workflows:
 1. PyTorchUnetInferenceSample.xircuits - To allow inferencing of trained Unet model in either pytorch or onnx format.
-2. PyTorchUnetTrainSample.xircuits - To allow training of binary class masking with Unet model
+2. PyTorchUnetTrainSample.xircuits - To allow training of binary class masking with Unet model.
 3. PyTorchToOnnxSample.xircuits - To allow conversion of torch model to onnx model.
 
 **To Test**
